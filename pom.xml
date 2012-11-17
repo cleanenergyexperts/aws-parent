@@ -4,7 +4,7 @@
 
 	<groupId>com.cleanenergyexperts</groupId>
 	<artifactId>s3-webcache-maven-plugin</artifactId>
-	<version>0.0.5</version>
+	<version>0.0.6-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>AWS S3 WebCache Maven Plugin</name>
