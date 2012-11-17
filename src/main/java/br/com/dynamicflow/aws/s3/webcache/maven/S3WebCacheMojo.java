@@ -19,6 +19,7 @@ import javax.activation.MimetypesFileTypeMap;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.codehaus.plexus.util.FileUtils;
@@ -30,9 +31,11 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.cee.common.io.RelativePathUtils;
 
-import edu.emory.mathcs.backport.java.util.Arrays;
+import eu.medsea.mimeutil.MimeUtil;
 
 /**
  * @prefix s3-webcache
@@ -43,37 +46,79 @@ import edu.emory.mathcs.backport.java.util.Arrays;
  * @description Uploads static resources to a AWS S3 Bucket
  * 
  */
+@SuppressWarnings("restriction")
 public class S3WebCacheMojo extends AbstractMojo {
-	
+
+	private static final String DIGEST_NONE = "none";
 	private static final String DIGEST_SHA512 = "sha512";
-
 	private static final String DIGEST_SHA384 = "sha384";
-
 	private static final String DIGEST_SHA256 = "sha256";
-
 	private static final String DIGEST_SHA1 = "sha1";
-
 	private static final String DIGEST_MD5 = "md5";
-
-	private static final List<String> DIGEST_OPTIONS = Arrays.asList(new String[]{DIGEST_MD5,DIGEST_SHA1,DIGEST_SHA256,DIGEST_SHA384,DIGEST_SHA512});
 	
-	private static final String CONTENT_ENCODING_PLAIN = "plain";
+	private static final List<String> DIGEST_OPTIONS;
+	static {
+		DIGEST_OPTIONS = new ArrayList<String>();
+		DIGEST_OPTIONS.add(DIGEST_NONE);
+		DIGEST_OPTIONS.add(DIGEST_MD5);
+		DIGEST_OPTIONS.add(DIGEST_SHA1);
+		DIGEST_OPTIONS.add(DIGEST_SHA256);
+		DIGEST_OPTIONS.add(DIGEST_SHA384);
+		DIGEST_OPTIONS.add(DIGEST_SHA512);
+	}
 
+	private static final String CONTENT_ENCODING_PLAIN = "plain";
 	private static final String CONTENT_ENCODING_GZIP = "gzip";
 
-	private static final List<String> CONTENT_ENCODING_OPTIONS = Arrays.asList(new String[]{CONTENT_ENCODING_PLAIN,CONTENT_ENCODING_GZIP});
+	private static final List<String> CONTENT_ENCODING_OPTIONS;
+	static {
+		CONTENT_ENCODING_OPTIONS = new ArrayList<String>();
+		CONTENT_ENCODING_OPTIONS.add(CONTENT_ENCODING_PLAIN);
+		CONTENT_ENCODING_OPTIONS.add(CONTENT_ENCODING_GZIP);
+	}
+	
+	private static final SimpleDateFormat httpDateFormat;
+	static {
+		httpDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+		httpDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+	}
+	
+	private static final Date EXPIRES_DATE;
+	static {
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.YEAR, 10);
+		EXPIRES_DATE = calendar.getTime();
+	}
 	
 	private static final int BUFFER_SIZE = 4096;
 	
 	public static final String S3_URL = "s3.amazonaws.com";
 	
+	/** OLD **/
+	// @see http://en.wikipedia.org/wiki/Internet_media_type#Type_image
 	private static final MimetypesFileTypeMap mimeMap = new MimetypesFileTypeMap();
+	static {
+		mimeMap.addMimeTypes("application/javascript js");
+		mimeMap.addMimeTypes("image/png png");
+		mimeMap.addMimeTypes("image/gif gif");
+		mimeMap.addMimeTypes("image/jpeg jpg jpeg");
+		mimeMap.addMimeTypes("image/svg+xml svg");
+		mimeMap.addMimeTypes("image/tiff tiff");
+		mimeMap.addMimeTypes("image/vnd.microsoft.icon ico");
+		mimeMap.addMimeTypes("application/json json");
+		mimeMap.addMimeTypes("text/css css");
+		mimeMap.addMimeTypes("text/csv csv");
+		mimeMap.addMimeTypes("text/html html");
+		mimeMap.addMimeTypes("text/plain txt");
+		mimeMap.addMimeTypes("text/vcard vcard");
+		mimeMap.addMimeTypes("text/xml xml");
+		mimeMap.addMimeTypes("video/x-flv flv");
+		mimeMap.addMimeTypes("application/zip zip");
+	}
 	
-	private static final SimpleDateFormat httpDateFormat;
-	 
-	static{
-		httpDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
-		httpDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+	public S3WebCacheMojo() {
+		super();
+		MimeUtil.registerMimeDetector("eu.medsea.mimeutil.detector.MagicMimeMimeDetector");
 	}
 	
 	/**
@@ -162,10 +207,18 @@ public class S3WebCacheMojo extends AbstractMojo {
 	/**
 	* Digest Type
 	*
-	* @parameter default-value="sha256"
+	* @parameter default-value="none"
 	* @required
 	*/
 	private String digestType;
+	
+	/**
+	* Version Key
+	*
+	* @parameter default-value="${project.version}"
+	* @required
+	*/
+	private String versionKey;
 	
 	public void execute() throws MojoExecutionException {
 		getLog().info("tmpDirectory " + tmpDirectory.getPath());
@@ -207,12 +260,15 @@ public class S3WebCacheMojo extends AbstractMojo {
 	private void processFile(AmazonS3Client client, WebCacheConfig webCacheConfig, File file)
 			throws MojoExecutionException {
 		getLog().info("start processing file "+file.getPath()); 	
-		
+
+		String relativePath = getPlainRelativePath(file);
+		getLog().info("Relative Path to file: " + relativePath);
+
+		String contentType = getMimeType(file); //mimeMap.getContentType(file);
+		getLog().info("Mime Type: " + contentType);
 		File encodedFile = encodeFile(file);
-		String contentType = mimeMap.getContentType(file);
 		
 		String digest = calculateDigest(encodedFile);
-		
 		ObjectMetadata objectMetadata = retrieveObjectMetadata(client, digest);
 		
 		if (objectMetadata != null && objectMetadata.getETag().equals(calculateETag(encodedFile))) {
@@ -220,8 +276,7 @@ public class S3WebCacheMojo extends AbstractMojo {
 		} else {
 			uploadFile(client, encodedFile, digest, contentType);
 		}
-		
-		webCacheConfig.addToCachedFiles(file.getPath().substring(inputDirectory.getPath().length()),digest);
+		webCacheConfig.addToCachedFiles(relativePath, digest);
 		
 		getLog().info("finnish processing file "+file.getPath());
 		getLog().info("");
@@ -276,19 +331,25 @@ public class S3WebCacheMojo extends AbstractMojo {
 		getLog().info("uploading file "+file+" to "+bucketName);	
 		try {
 			getLog().info("content type for "+file.getName()+" is "+contentType);
+			
+			// Object Meta Data
 			ObjectMetadata objectMetadata = new ObjectMetadata();
 			objectMetadata.setContentLength(file.length());
-			objectMetadata.setHeader("Content-Disposition", "filename="+file.getName());
+			//objectMetadata.setHeader("Content-Disposition", "filename=" + file.getName());
 			objectMetadata.setHeader("Cache-Control", "public, s-maxage=315360000, max-age=315360000");
-			Calendar calendar = Calendar.getInstance();
-			calendar.add(Calendar.YEAR, 10);
-			objectMetadata.setHeader("Expires", httpDateFormat.format(calendar.getTime()));
+			objectMetadata.setHeader("Expires", httpDateFormat.format(EXPIRES_DATE));
 			objectMetadata.setLastModified(new Date(file.lastModified()));
 			if (!CONTENT_ENCODING_PLAIN.equalsIgnoreCase(contentEncoding)) {
 				objectMetadata.setContentEncoding(contentEncoding.toLowerCase());
 			}
 			objectMetadata.setContentType(contentType);
-			client.putObject(bucketName, remoteFileName, new FileInputStream(file), objectMetadata);			
+			
+			// Upload Object/File
+			client.putObject(bucketName, remoteFileName, new FileInputStream(file), objectMetadata);
+			
+			// Access Control List
+			client.setObjectAcl(bucketName, remoteFileName, CannedAccessControlList.PublicRead);
+			
 		} catch (AmazonServiceException e) {
 			throw new MojoExecutionException("could not upload file "+file.getName(),e);
 		} catch (AmazonClientException e) {
@@ -360,7 +421,13 @@ public class S3WebCacheMojo extends AbstractMojo {
 			} 
 			else if (DIGEST_SHA512.equalsIgnoreCase(digestType)) {
 				digest = Hex.encodeHexString(DigestUtils.sha512(new FileInputStream(file)));
-			} 
+			} else { // DIGEST_NONE
+				if (versionKey != null && !versionKey.isEmpty()) {
+					digest = versionKey + "/" + getPlainRelativePath(file);
+				} else {
+					digest = getPlainRelativePath(file);
+				}
+			}
 
 		} catch (Exception e) {
 			throw new MojoExecutionException("could not calculate digest for "+file.getName(),e);
@@ -383,5 +450,28 @@ public class S3WebCacheMojo extends AbstractMojo {
 			builder.append(iterator.next());
 		}
 		return builder.toString();
+	}
+	
+	/**
+	 * Returns the plain, relative, unix-style path to a file
+	 * (relative to the inputDirectory)
+	 * @param file
+	 * @return relative unix-style path
+	 */
+	protected String getPlainRelativePath(File file) {
+		String relativePath = RelativePathUtils.getRelativePath(inputDirectory, file);
+		return FilenameUtils.separatorsToUnix(relativePath);
+	}
+	
+	/**
+	 * Uses mime-util to get the mime type of a file
+	 * @see http://stackoverflow.com/questions/8488491/how-to-accurately-determine-mime-data-from-a-file
+	 * @param file
+	 * @return content type of file as a string
+	 */
+	protected String getMimeType(File file) {
+		//Collection<?> mimeTypes = MimeUtil.getMimeTypes(file);
+		//return MimeUtil.getFirstMimeType(mimeTypes.toString()).toString();
+		return mimeMap.getContentType(file);
 	}
 }

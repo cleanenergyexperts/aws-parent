@@ -1,26 +1,17 @@
-aws-parent
-==========
+S3 WebCache Maven Plugin
+========================
 
-AWS Maven Plugins and Examples
+Original Code From: https://github.com/aro1976/aws-parent
 
-create maven settings.xml file before running examples
+S3 WebCache Maven Plugin uploads the static files from the src/main/webapp directory of a Java
+Web Application to S3, which can then be placed behind CloudFront to use as a CDN.
 
-<?xml version="1.0" encoding="UTF-8"?>
-<settings xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd" xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+## Installation
+Add the following lines to your pom.xml (with the correct values of course).
 
-        <profiles>
-                <profile>
-                        <id>aws</id>
-                        <properties>
-                                <aws.accessKey>IASDHASDHASIDHWERBW2</aws.accessKey>
-                                <aws.secretKey>eptWdHgsN4XU0N4SFlpZvzikGkTFnGF/nl/mEAhm</aws.secretKey>
-                                <aws.bucketName>data.fs.mycompany</aws.bucketName>
-                        </properties>
-                </profile>
-        </profiles>
+    <properties>
+    	<aws.accessKey>IASDHASDHASIDHWERBW2</aws.accessKey>
+    	<aws.secretKey>eptWdHgsN4XU0N4SFlpZvzikGkTFnGF/nl/mEAhm</aws.secretKey>
+    	<aws.bucketName>data.fs.mycompany</aws.bucketName>
+    </properties>
 
-        <activeProfiles>
-                <activeProfile>aws</activeProfile>
-        </activeProfiles>
-</settings>

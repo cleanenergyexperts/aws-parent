@@ -1,129 +1,74 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>br.com.dynamicflow.aws</groupId>
-	<artifactId>aws-parent</artifactId>
-	<packaging>pom</packaging>
-	<version>0.0.4-SNAPSHOT</version>
-	<name>AWS Parent</name>
-	<url>http://aws.amazon.com</url>
-	<organization>
-		<name>Dynamic Flow S/S Ltda.</name>
-		<url>https://github.com/aro1976/aws-parent</url>
-	</organization>
-	<inceptionYear>2012</inceptionYear>
 
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-	</properties>
+	<groupId>com.cleanenergyexperts</groupId>
+	<artifactId>s3-webcache-maven-plugin</artifactId>
+	<version>0.0.5-SNAPSHOT</version>
+	<packaging>maven-plugin</packaging>
 
-	<distributionManagement>
-	     <repository>
-	         <id>dynamicflow-release</id>
-	         <name>Dynamic Flow - S3 Maven Release Repository</name>
-	         <url>s3://maven.dynamicflow/release</url>
-	     </repository>
-	     <snapshotRepository>
-	     	 <id>dynamicflow-snapshot</id>
-	         <name>Dynamic Flow - S3 Maven Snapshot Repository</name>
-	         <url>s3://maven.dynamicflow/snapshot</url>
-	     </snapshotRepository>
-	     <site>
-	     	<id>dynamicflow-site</id>
- 			<name>Dynamic Flow - S3 Maven Site</name>
-	        <url>s3://maven.dynamicflow/site</url>
-	     </site>
-	 </distributionManagement>
- 
- 	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>org.springframework.build.aws</groupId>
-				<artifactId>org.springframework.build.aws.maven</artifactId>
-				<version>3.0.0.RELEASE</version>
-				<scope>provided</scope>
-			</dependency>
-                        <dependency>
-                                <groupId>javax.servlet.jsp</groupId>
-                                <artifactId>jsp-api</artifactId>
-                                <version>2.2</version>
-                                <scope>provided</scope>
-                        </dependency>
-			<dependency>
-				<groupId>javax.servlet</groupId>
-				<artifactId>javax.servlet-api</artifactId>
-				<version>3.0.1</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.maven.plugin-tools</groupId>
-				<artifactId>maven-plugin-tools-api</artifactId>
-				<version>3.1</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.maven</groupId>
-				<artifactId>maven-core</artifactId>
-				<version>3.0.4</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.maven</groupId>
-				<artifactId>maven-plugin-api</artifactId>
-				<version>3.0.4</version>
-			</dependency>
-			<dependency>
-				<groupId>org.codehaus.plexus</groupId>
-				<artifactId>plexus-utils</artifactId>
-				<version>3.0.1</version>
-			</dependency>
-			<dependency>
-				<groupId>commons-codec</groupId>
-				<artifactId>commons-codec</artifactId>
-				<version>1.6</version>
-			</dependency>
-			<dependency>
-				<groupId>com.amazonaws</groupId>
-				<artifactId>aws-java-sdk</artifactId>
-				<version>1.3.13</version>
-				<scope>required</scope>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
-	
-	<modules>
-		<module>aws-utils</module>
-		<module>aws-plugins</module>
-		<module>aws-examples</module>
-	</modules>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>2.5.1</version>
-				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-deploy-plugin</artifactId>
-				<version>2.5</version>
-				<dependencies>
-					<dependency>
-						<groupId>org.springframework.build.aws</groupId>
-						<artifactId>org.springframework.build.aws.maven</artifactId>
-						<version>3.0.0.RELEASE</version>
-					</dependency>
-				</dependencies>
-			</plugin>
-		</plugins>
-	</build>
-	
+	<name>AWS S3 WebCache Maven Plugin</name>
 	<scm>
-		<connection>scm:git:https://github.com/aro1976/aws-parent.git</connection>
-		<developerConnection>scm:git:https://github.com/aro1976/aws-parent.git</developerConnection>
-		<url>https://github.com/aro1976/aws-parent</url>
+		<url>scm:git:git@github.com:cleanenergyexperts/aws-parent.git</url>
+		<connection>scm:git:git@github.com:cleanenergyexperts/aws-parent.git</connection>
+		<developerConnection>scm:git:git@github.com:cleanenergyexperts/aws-parent.git</developerConnection>
 	</scm>
-	
+
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.maven.plugin-tools</groupId>
+			<artifactId>maven-plugin-tools-api</artifactId>
+			<version>3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-core</artifactId>
+			<version>3.0.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-plugin-api</artifactId>
+			<version>3.0.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.codehaus.plexus</groupId>
+			<artifactId>plexus-utils</artifactId>
+			<version>3.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.7</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>eu.medsea.mimeutil</groupId>
+			<artifactId>mime-util</artifactId>
+			<version>2.1.3</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk</artifactId>
+			<version>1.3.22</version>
+			<scope>required</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.0.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet.jsp</groupId>
+			<artifactId>jsp-api</artifactId>
+			<version>2.2</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
 </project>

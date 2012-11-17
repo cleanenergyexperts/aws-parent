@@ -10,6 +10,12 @@ public class CachedFile {
 	public CachedFile() {
 	}
 	
+	public CachedFile(String originalPath) {
+		super();
+		this.originalPath = originalPath;
+		this.digest = originalPath;
+	}
+	
 	public CachedFile(String originalPath, String digest) {
 		super();
 		this.originalPath = originalPath;
