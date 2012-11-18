@@ -1,12 +1,4 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package br.com.dynamicflow.aws.s3.webcache.tag;
-
-import br.com.dynamicflow.aws.s3.webcache.util.CachedFile;
-import br.com.dynamicflow.aws.s3.webcache.util.WebCacheConfig;
-import br.com.dynamicflow.aws.s3.webcache.util.WebCacheManager;
 
 import java.io.File;
 import java.io.InputStream;
@@ -15,15 +7,19 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.servlet.jsp.JspWriter;
-import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.tagext.TagSupport;
+
+import br.com.dynamicflow.aws.s3.webcache.util.CachedFile;
+import br.com.dynamicflow.aws.s3.webcache.util.WebCacheConfig;
+import br.com.dynamicflow.aws.s3.webcache.util.WebCacheManager;
 
 /**
  *
  * @author aoliveir
  */
 public class S3CacheTagSupport extends TagSupport {
+	private static final long serialVersionUID = -6823935193172021372L;
+
 	private static final Logger log = Logger.getLogger("br.com.dynamicflow.aws.s3.webcache.tag.S3CacheTagSupport");
 	
     private static Map<String,String> urlMapping;

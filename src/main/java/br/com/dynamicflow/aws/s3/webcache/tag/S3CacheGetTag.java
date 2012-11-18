@@ -1,26 +1,16 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package br.com.dynamicflow.aws.s3.webcache.tag;
 
-import br.com.dynamicflow.aws.s3.webcache.util.CachedFile;
-import br.com.dynamicflow.aws.s3.webcache.util.WebCacheConfig;
-import br.com.dynamicflow.aws.s3.webcache.util.WebCacheManager;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
-import javax.servlet.jsp.JspWriter;
 import javax.servlet.jsp.JspException;
-import javax.servlet.jsp.tagext.TagSupport;
+import javax.servlet.jsp.JspWriter;
 
 /**
  *
  * @author aoliveir
  */
 public class S3CacheGetTag extends S3CacheTagSupport {
-    
-    private String src;
+	private static final long serialVersionUID = 6607932265118064981L;
+	
+	private String src;
     
     @Override
     public int doStartTag() throws JspException {

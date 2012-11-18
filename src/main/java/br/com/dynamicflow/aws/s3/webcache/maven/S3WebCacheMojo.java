@@ -35,8 +35,6 @@ import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.cee.common.io.RelativePathUtils;
 
-import eu.medsea.mimeutil.MimeUtil;
-
 /**
  * @prefix s3-webcache
  * @requiresProject true
@@ -46,7 +44,6 @@ import eu.medsea.mimeutil.MimeUtil;
  * @description Uploads static resources to a AWS S3 Bucket
  * 
  */
-@SuppressWarnings("restriction")
 public class S3WebCacheMojo extends AbstractMojo {
 
 	private static final String DIGEST_NONE = "none";
@@ -94,8 +91,12 @@ public class S3WebCacheMojo extends AbstractMojo {
 	
 	public static final String S3_URL = "s3.amazonaws.com";
 	
-	/** OLD **/
-	// @see http://en.wikipedia.org/wiki/Internet_media_type#Type_image
+	/**
+	 * Setup the Mime Type mappings. These are some of the most common types
+	 * below but this list can use updating. If a type is not in the list it
+	 * will generally be marked as application/octet-stream and will typically
+	 * not be handled correctly by AWS S3 (depending on your use case).
+	 */
 	private static final MimetypesFileTypeMap mimeMap = new MimetypesFileTypeMap();
 	static {
 		mimeMap.addMimeTypes("application/javascript js");
@@ -114,11 +115,7 @@ public class S3WebCacheMojo extends AbstractMojo {
 		mimeMap.addMimeTypes("text/xml xml");
 		mimeMap.addMimeTypes("video/x-flv flv");
 		mimeMap.addMimeTypes("application/zip zip");
-	}
-	
-	public S3WebCacheMojo() {
-		super();
-		MimeUtil.registerMimeDetector("eu.medsea.mimeutil.detector.MagicMimeMimeDetector");
+		mimeMap.addMimeTypes("application/font-woff woff");
 	}
 	
 	/**
