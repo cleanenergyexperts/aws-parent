@@ -5,9 +5,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.security.MessageDigest;
+import java.text.Collator;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -22,7 +26,10 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.FileUtils;
+
+import sun.security.provider.MD5;
 
 import br.com.dynamicflow.aws.s3.webcache.util.WebCacheConfig;
 import br.com.dynamicflow.aws.s3.webcache.util.WebCacheManager;
@@ -34,6 +41,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.cee.common.io.RelativePathUtils;
+import com.cee.common.io.StringXORer;
 
 /**
  * @prefix s3-webcache
@@ -46,7 +54,7 @@ import com.cee.common.io.RelativePathUtils;
  */
 public class S3WebCacheMojo extends AbstractMojo {
 
-	private static final String DIGEST_NONE = "none";
+	//private static final String DIGEST_NONE = "none";
 	private static final String DIGEST_SHA512 = "sha512";
 	private static final String DIGEST_SHA384 = "sha384";
 	private static final String DIGEST_SHA256 = "sha256";
@@ -56,12 +64,22 @@ public class S3WebCacheMojo extends AbstractMojo {
 	private static final List<String> DIGEST_OPTIONS;
 	static {
 		DIGEST_OPTIONS = new ArrayList<String>();
-		DIGEST_OPTIONS.add(DIGEST_NONE);
+		//DIGEST_OPTIONS.add(DIGEST_NONE);
 		DIGEST_OPTIONS.add(DIGEST_MD5);
 		DIGEST_OPTIONS.add(DIGEST_SHA1);
 		DIGEST_OPTIONS.add(DIGEST_SHA256);
 		DIGEST_OPTIONS.add(DIGEST_SHA384);
 		DIGEST_OPTIONS.add(DIGEST_SHA512);
+	}
+	
+	private static final String DIGEST_LEVEL_FILE = "file";
+	private static final String DIGEST_LEVEL_GLOBAL = "global";
+	
+	private static final List<String> DIGEST_LEVELS;
+	static {
+		DIGEST_LEVELS = new ArrayList<String>();
+		DIGEST_LEVELS.add(DIGEST_LEVEL_FILE);
+		DIGEST_LEVELS.add(DIGEST_LEVEL_GLOBAL);
 	}
 
 	private static final String CONTENT_ENCODING_PLAIN = "plain";
@@ -210,12 +228,23 @@ public class S3WebCacheMojo extends AbstractMojo {
 	private String digestType;
 	
 	/**
-	* Version Key
-	*
-	* @parameter default-value="${project.version}"
-	* @required
-	*/
-	private String versionKey;
+	 * Digest Level
+	 * 
+	 * @parameter default-value="global"
+	 * @required
+	 */
+	private String digestLevel;
+	
+	/** 
+     * The Maven project. 
+     * 
+     * @parameter expression="${project}" 
+     * @required 
+     * @readonly 
+     */ 
+    private MavenProject project; 
+
+	private String globalDigest = "";
 	
 	public void execute() throws MojoExecutionException {
 		getLog().info("tmpDirectory " + tmpDirectory.getPath());
@@ -233,17 +262,43 @@ public class S3WebCacheMojo extends AbstractMojo {
 		if (!contains(DIGEST_OPTIONS, digestType)) {
 			throw new MojoExecutionException("digestType "+digestType+" must be in "+DIGEST_OPTIONS);
 		}
-		getLog().info("using digestType "+digestType);
+		getLog().info("using digestType " + digestType);
+		getLog().info("using digestLevel " + digestLevel);
 		
 		WebCacheConfig webCacheConfig = new WebCacheConfig(hostName);
 		
-		BasicAWSCredentials awsCredentials = new BasicAWSCredentials(accessKey,secretKey);
+		BasicAWSCredentials awsCredentials = new BasicAWSCredentials(accessKey, secretKey);
 		AmazonS3Client client = new AmazonS3Client(awsCredentials);
 		
 		try {
 			getLog().info( "determining files that should be uploaded" );
 			getLog().info("");
 			List<String> fileNames = FileUtils.getFileNames(inputDirectory, convertToString(includes), convertToString(excludes), true, false);
+			
+			// Compute the Global Digest, if needed
+			if (digestLevel.equalsIgnoreCase(DIGEST_LEVEL_GLOBAL)) {
+				getLog().info("running global digest...");
+				Collections.sort(fileNames, Collator.getInstance());
+				
+				/**
+				 * What we do here is digest all the files and MD5 those digests together
+				 */
+				byte[] globalBytes = null;
+				for (String fileName : fileNames) {
+					byte[] fileDigest = rawDigest(new File(fileName));
+					if (globalBytes == null) {
+						globalBytes = fileDigest;
+					} else {
+						globalBytes = StringXORer.xorWithKey(globalBytes, fileDigest);
+					}
+					//getLog().info(" >> global so far: " + Hex.encodeHexString(DigestUtils.md5(globalBytes)));
+				}
+				globalDigest = Hex.encodeHexString(DigestUtils.md5(globalBytes));
+				getLog().info("global digest is " + globalDigest);
+				project.getProperties().put("project.web.digest", globalDigest);
+			}
+			
+			// Upload the files
 			for (String fileName: fileNames) {
 				processFile(client, webCacheConfig, new File(fileName));
 			}
@@ -261,7 +316,7 @@ public class S3WebCacheMojo extends AbstractMojo {
 		String relativePath = getPlainRelativePath(file);
 		getLog().info("Relative Path to file: " + relativePath);
 
-		String contentType = getMimeType(file); //mimeMap.getContentType(file);
+		String contentType = getMimeType(file);
 		getLog().info("Mime Type: " + contentType);
 		File encodedFile = encodeFile(file);
 		
@@ -334,7 +389,8 @@ public class S3WebCacheMojo extends AbstractMojo {
 			objectMetadata.setContentLength(file.length());
 			//objectMetadata.setHeader("Content-Disposition", "filename=" + file.getName());
 			objectMetadata.setHeader("Cache-Control", "public, s-maxage=315360000, max-age=315360000");
-			objectMetadata.setHeader("Expires", httpDateFormat.format(EXPIRES_DATE));
+			//objectMetadata.setHeader("Expires", httpDateFormat.format(EXPIRES_DATE));
+			objectMetadata.setHeader("Expires", EXPIRES_DATE.getTime());
 			objectMetadata.setLastModified(new Date(file.lastModified()));
 			if (!CONTENT_ENCODING_PLAIN.equalsIgnoreCase(contentEncoding)) {
 				objectMetadata.setContentEncoding(contentEncoding.toLowerCase());
@@ -402,9 +458,19 @@ public class S3WebCacheMojo extends AbstractMojo {
 	}
 	
 	private String calculateDigest(File file) throws MojoExecutionException {
+		if (digestLevel.equalsIgnoreCase(DIGEST_LEVEL_GLOBAL) && globalDigest != null && !globalDigest.isEmpty()) {
+			return globalDigest + "/" + getPlainRelativePath(file);
+		} else {
+			return Hex.encodeHexString(rawDigest(file));
+		}
+		
+		/*
 		String digest = null;
 		try {
-			if (DIGEST_MD5.equalsIgnoreCase(digestType)) {
+			if (digestLevel.equalsIgnoreCase(DIGEST_LEVEL_GLOBAL) && globalDigest != null && !globalDigest.isEmpty()) {
+				digest = globalDigest + "/" + getPlainRelativePath(file);
+			}
+			else if (DIGEST_MD5.equalsIgnoreCase(digestType)) {
 				digest = Hex.encodeHexString(DigestUtils.md5(new FileInputStream(file)));
 			} 
 			else if (DIGEST_SHA1.equalsIgnoreCase(digestType)) {
@@ -419,18 +485,37 @@ public class S3WebCacheMojo extends AbstractMojo {
 			else if (DIGEST_SHA512.equalsIgnoreCase(digestType)) {
 				digest = Hex.encodeHexString(DigestUtils.sha512(new FileInputStream(file)));
 			} else { // DIGEST_NONE
-				if (versionKey != null && !versionKey.isEmpty()) {
-					digest = versionKey + "/" + getPlainRelativePath(file);
-				} else {
-					digest = getPlainRelativePath(file);
-				}
+				throw new MojoExecutionException("No digest type set!!");
 			}
-
 		} catch (Exception e) {
 			throw new MojoExecutionException("could not calculate digest for "+file.getName(),e);
 		} 
 		getLog().info("digest for "+file.getName()+" is "+digest);
-		return digest;
+		return digest;*/
+	}
+	
+	protected byte[] rawDigest(File file) throws MojoExecutionException {
+		try {
+			if (DIGEST_MD5.equalsIgnoreCase(digestType)) {
+				return DigestUtils.md5(new FileInputStream(file));
+			} 
+			else if (DIGEST_SHA1.equalsIgnoreCase(digestType)) {
+				return DigestUtils.sha(new FileInputStream(file));
+			}
+			else if (DIGEST_SHA256.equalsIgnoreCase(digestType)) {
+				return DigestUtils.sha256(new FileInputStream(file));
+			}
+			else if (DIGEST_SHA384.equalsIgnoreCase(digestType)) {
+				return DigestUtils.sha384(new FileInputStream(file));
+			} 
+			else if (DIGEST_SHA512.equalsIgnoreCase(digestType)) {
+				return DigestUtils.sha512(new FileInputStream(file));
+			} else {
+				throw new MojoExecutionException("No digest type set!!");
+			}
+		} catch (Exception e) {
+			throw new MojoExecutionException("could not calculate digest for " + file.getName(), e);
+		}
 	}
 	
 	private void generateConfigManifest(WebCacheConfig webCacheConfig) throws MojoExecutionException {
