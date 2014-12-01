@@ -66,3 +66,33 @@ To upload your files to AWS S3 after completing setup there are two options:
 
 2. Automated: The setup above is already configured to run during the build. Typically,
 this is done in a profile for only certain environments.
+
+
+To use this library in another Maven Project:
+---------------------------------------------
+
+Add the following to the pom.xml for releases:
+
+```
+<repositories>
+    <repository>
+        <id>maven.leadoperations.co-release</id>
+        <name>AWS S3 Release Repository</name>
+        <url>http://maven.leadoperations.co/release</url>
+    </repository>
+</repositories>
+```
+
+or for snapshots:
+```
+<repositories>
+    <repository>
+        <id>maven.leadoperations.co-snapshot</id>
+        <name>AWS S3 Snapshot Repository</name>
+        <url>http://maven.leadoperations.co/snapshot</url>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+</repositories>
+```

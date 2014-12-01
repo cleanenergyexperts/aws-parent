@@ -14,74 +14,35 @@
 		The purpose of this plugin is to make the use of a CDN for you static assets automatic 
 		when deploying a maven webapp.
 	</description>
-
-	<licenses>
-		<license>
-			<name>TBD</name>
-			<url>TBD</url>
-			<distribution>manual</distribution>
-		</license>
-	</licenses>
-
+	
 	<scm>
 		<url>scm:git:git@github.com:cleanenergyexperts/aws-parent.git</url>
 		<connection>scm:git:git@github.com:cleanenergyexperts/aws-parent.git</connection>
 		<developerConnection>scm:git:git@github.com:cleanenergyexperts/aws-parent.git</developerConnection>
 	</scm>
-
-	<!--  @see https://github.com/arey/maven-config-github-cloudbees/blob/master/pom.xml -->
 	<distributionManagement>
-		<downloadUrl>https://github.com:cleanenergyexperts/aws-parent</downloadUrl>
-		<snapshotRepository>
-			<id>cee.forge.cloudbees.com-snapshots</id>
-			<name>cee.forge.cloudbees.com-snapshots</name>
-			<url>dav:https://repository-cee.forge.cloudbees.com/snapshot</url>
-		</snapshotRepository>
 		<repository>
-			<id>cee.forge.cloudbees.com-releases</id>
-			<name>cee.forge.cloudbees.com-releases</name>
-			<url>dav:https://repository-cee.forge.cloudbees.com/release</url>
+			<id>aws-release</id>
+			<name>AWS Release Repository</name>
+			<url>s3://maven.leadoperations.co/release</url>
 		</repository>
+		<snapshotRepository>
+			<id>aws-snapshot</id>
+			<name>AWS Snapshot Repository</name>
+			<url>s3://maven.leadoperations.co/snapshot</url>
+		</snapshotRepository>
 	</distributionManagement>
 
 	<build>
 		<extensions>
-			<!-- Extension required to deploy a snapshot or a release to the CloudBees 
-				remote maven repository using Webdav -->
 			<extension>
-				<groupId>org.apache.maven.wagon</groupId>
-				<artifactId>wagon-webdav</artifactId>
-				<version>1.0-beta-2</version>
+				<groupId>org.springframework.build</groupId>
+				<artifactId>aws-maven</artifactId>
+				<version>5.0.0.RELEASE</version>
 			</extension>
 		</extensions>
 	</build>
 	
-	<repositories>
-		<!-- Cloudbees maven repositories for releases and snapshots -->
-		<repository>
-			<id>cee.forge.cloudbees.com-releases</id>
-			<name>cee.forge.cloudbees.com-releases</name>
-			<url>https://repository-cee.forge.cloudbees.com/release/</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-		<repository>
-			<id>cee.forge.cloudbees.com-snapshots</id>
-			<name>cee.forge.cloudbees.com-snapshots</name>
-			<url>https://repository-cee.forge.cloudbees.com/snapshot/</url>
-			<releases>
-				<enabled>false</enabled>
-			</releases>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.maven.plugin-tools</groupId>
