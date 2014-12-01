@@ -26,7 +26,7 @@ Then in the build section of your pom.xml add the plugin:
 	<plugin>
 	 	<groupId>com.cleanenergyexperts</groupId>
 		<artifactId>s3-webcache-maven-plugin</artifactId>
-		<version>0.0.5-SNAPSHOT</version>
+		<version>0.0.8</version>
 		<configuration>
 			<accessKey>${aws.accessKey}</accessKey>
 			<secretKey>${aws.secretKey}</secretKey>
